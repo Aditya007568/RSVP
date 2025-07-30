@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- HTML5-QRCode for scanning -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen active">
+            <div class="card login-card">
+                <h1 class="app-title"><i class="fas fa-calendar-check"></i> RSVP App</h1>
+                
+                <div class="tab-container">
+                    <div class="tab-toggle active" id="login-tab">Login</div>
+                    <div class="tab-toggle" id="register-tab">Register</div>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-form-container" class="form-container">
+                    <form id="login-form" class="form">
+                        <div class="form-group">
+                            <label for="login-email"><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password"><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Login</button>
+                    </form>
+                </div>
+                
+                <!-- Register Form -->
+                <div id="register-form-container" class="form-container hidden">
+                    <form id="register-form" class="form">
+                        <div class="form-group">
+                            <label for="register-name"><i class="fas fa-user"></i> Full Name</label>
+                            <input type="text" id="register-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email"><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password"><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="register-password" required>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="register-admin">
+                            <label for="register-admin">Register as Admin</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Register</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen">
+            <div class="card">
+                <h2><i class="fas fa-home"></i> Welcome to RSVP App</h2>
+                <p>Create or join a community to manage events and RSVPs</p>
+                
+                <div class="button-group">
+                    <button id="create-community-btn" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Create Community</button>
+                    <button id="join-community-btn" class="btn btn-secondary"><i class="fas fa-sign-in-alt"></i> Join Community</button>
+                    <button id="logout-btn" class="btn btn-text"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Community Screen -->
+        <div id="create-community-screen" class="screen">
+            <div class="card">
+                <h2><i class="fas fa-users"></i> Create Community</h2>
+                <form id="create-community-form" class="form">
+                    <div class="form-group">
+                        <label for="community-name"><i class="fas fa-signature"></i> Community Name</label>
+                        <input type="text" id="community-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="community-description"><i class="fas fa-info-circle"></i> Description</label>
+                        <textarea id="community-description" rows="3" required></textarea>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" id="back-from-create" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Join Community Screen -->
+        <div id="join-community-screen" class="screen">
+            <div class="card">
+                <h2><i class="fas fa-sign-in-alt"></i> Join Community</h2>
+                <form id="join-community-form" class="form">
+                    <div class="form-group">
+                        <label for="community-code"><i class="fas fa-key"></i> Community Code</label>
+                        <input type="text" id="community-code" required>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" id="back-from-join" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Join</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Community Dashboard Screen -->
+        <div id="dashboard-screen" class="screen">
+            <div class="card">
+                <div class="dashboard-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> <span id="community-dashboard-name">Community</span></h2>
+                    <div class="button-group">
+                        <button id="create-event-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Create Event</button>
+                        <button id="dashboard-logout-btn" class="btn btn-text"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    </div>
+                </div>
+                
+                <div id="admin-controls" class="admin-controls">
+                    <h3><i class="fas fa-user-shield"></i> Admin Controls</h3>
+                    <div class="button-group">
+                        <button id="scan-rsvp-btn" class="btn btn-accent"><i class="fas fa-qrcode"></i> Scan RSVP Code</button>
+
+                    </div>
+                </div>
+                
+                <h3><i class="fas fa-calendar-alt"></i> Events</h3>
+                <div id="events-list" class="events-list">
+                    <div class="no-events">No events created yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Event Screen -->
+        <div id="create-event-screen" class="screen">
+            <div class="card">
+                <h2><i class="fas fa-calendar-plus"></i> Create Event</h2>
+                <form id="create-event-form" class="form">
+                    <div class="form-group">
+                        <label for="event-name"><i class="fas fa-signature"></i> Event Name</label>
+                        <input type="text" id="event-name" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event-date"><i class="fas fa-calendar"></i> Date</label>
+                            <input type="date" id="event-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-time"><i class="fas fa-clock"></i> Time</label>
+                            <input type="time" id="event-time" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-location"><i class="fas fa-map-marker-alt"></i> Location</label>
+                        <input type="text" id="event-location" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-description"><i class="fas fa-info-circle"></i> Description</label>
+                        <textarea id="event-description" rows="3" required></textarea>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" id="back-from-create-event" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Event Details Screen -->
+        <div id="event-details-screen" class="screen">
+            <div class="card">
+                <h2><i class="fas fa-calendar-day"></i> <span id="event-details-name">Event Details</span></h2>
+                
+                <div class="event-details-content">
+                    <div class="detail-item">
+                        <div class="detail-label"><i class="fas fa-calendar"></i> Date & Time</div>
+                        <div class="detail-value" id="event-details-datetime"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label"><i class="fas fa-map-marker-alt"></i> Location</div>
+                        <div class="detail-value" id="event-details-location"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label"><i class="fas fa-info-circle"></i> Description</div>
+                        <div class="detail-value" id="event-details-description"></div>
+                    </div>
+                </div>
+                
+                <div class="rsvp-section">
+                    <h3><i class="fas fa-ticket-alt"></i> Your RSVP Code</h3>
+                    <div class="rsvp-code-display">
+                        <div class="rsvp-code" id="rsvp-code"></div>
+                    </div>
+                    <div class="rsvp-qr-code" id="rsvp-qr-code"></div>
+                    <p class="rsvp-instructions">Show this code at the event entrance for check-in</p>
+                </div>
+                
+                <div class="button-group">
+                    <button id="export-rsvp-btn" class="btn btn-secondary"><i class="fas fa-file-export"></i> Export RSVP Data</button>
+                    <button id="back-from-event-details" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan RSVP Screen -->
+        <div id="scan-rsvp-screen" class="screen">
+            <div class="card">
+                <h2><i class="fas fa-qrcode"></i> Scan RSVP Code</h2>
+                
+                <div class="qr-reader" id="qr-reader"></div>
+                
+                <div class="manual-entry">
+                    <h3><i class="fas fa-keyboard"></i> Manual Entry</h3>
+                    <div class="form-group">
+                        <input type="text" id="manual-code" placeholder="Enter RSVP code">
+                        <button id="verify-manual-code" class="btn btn-primary"><i class="fas fa-check"></i> Verify</button>
+                    </div>
+                </div>
+                
+                <div id="verification-result" class="verification-result hidden">
+                    <!-- Back button will be added to verification result -->
+                    <div class="button-group verification-buttons">
+                        <button id="back-from-scan-result" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="back-from-scan" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Client for Server Integration -->
+    <script src="client.js"></script>
+    <!-- Main Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
