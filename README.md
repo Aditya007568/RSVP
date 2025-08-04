@@ -1,4 +1,4 @@
-# RSVP Application
+# Track-Mate Application
 
 A lightweight web application for managing community events and RSVPs. This application allows users to create communities, organize events, and manage attendees through a unique RSVP code system.
 

@@ -292,10 +292,10 @@ function showEventDetails(event) {
     
     // Generate QR code
     // Clear previous QR code
-    rsvpQrCode.innerHTML = '';
-    
-    // Generate new QR code
-    QRCode.toCanvas(rsvpQrCode, userRsvp.code, {
+    document.getElementById('rsvp-qr-code').innerHTML = '';
+    const canvas = document.createElement('canvas');
+    document.getElementById('rsvp-qr-code').appendChild(canvas);
+    QRCode.toCanvas(canvas, userRsvp.code, {
         width: 200,
         margin: 1,
         color: {
@@ -502,6 +502,7 @@ loginForm.addEventListener('submit', (e) => {
             hideLoading();
             showNotification('Login successful!', 'success');
             showScreen(homeScreen);
+            updateHomeScreenButtons(); // Call this after successful login
         } else {
             hideLoading();
             showNotification('Invalid email or password', 'error');
@@ -575,6 +576,7 @@ registerForm.addEventListener('submit', (e) => {
         hideLoading();
         showNotification('Registration successful!', 'success');
         showScreen(homeScreen);
+        updateHomeScreenButtons(); // Call this after successful registration
     }, 1000); // Simulate network delay
 });
 
@@ -865,6 +867,15 @@ function createNotificationsContainer() {
     container.id = 'notifications-container';
     document.body.appendChild(container);
     return container;
+}
+
+// On login or registration, show/hide create community button based on user role
+function updateHomeScreenButtons() {
+    if (currentUser && currentUser.isAdmin) {
+        createCommunityBtn.style.display = 'inline-block';
+    } else {
+        createCommunityBtn.style.display = 'none';
+    }
 }
 
 // Initialize the application when the DOM is fully loaded
