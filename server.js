@@ -2,6 +2,9 @@ const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +35,33 @@ pool.query('SELECT NOW()', (err, res) => {
         console.error('Database connection error:', err.stack);
     } else {
         console.log('Database connected successfully at:', res.rows[0].now);
+    }
+});
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const eventId = req.params.eventId;
+        const uploadDir = path.join(__dirname, 'uploads', eventId);
+        
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        // Generate unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
     }
 });
 
@@ -220,6 +250,127 @@ app.get('/api/rsvps/:code', async (req, res) => {
     } catch (err) {
         console.error('Error fetching RSVP:', err);
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// File upload endpoint
+app.post('/api/events/:eventId/files', upload.array('files', 10), async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const uploadedFiles = req.files;
+        
+        if (!uploadedFiles || uploadedFiles.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded' });
+        }
+        
+        // Save file metadata to database
+        const fileRecords = uploadedFiles.map(file => ({
+            eventId: eventId,
+            filename: file.originalname,
+            storedName: file.filename,
+            filepath: file.path,
+            size: file.size,
+            mimetype: file.mimetype,
+            uploadedBy: req.body.userId || 'admin',
+            uploadedAt: new Date().toISOString()
+        }));
+        
+        // Insert into database (you'll need to create this table)
+        for (const fileRecord of fileRecords) {
+            await pool.query(
+                'INSERT INTO event_files (event_id, filename, stored_name, filepath, size, mimetype, uploaded_by, uploaded_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                [fileRecord.eventId, fileRecord.filename, fileRecord.storedName, fileRecord.filepath, fileRecord.size, fileRecord.mimetype, fileRecord.uploadedBy, fileRecord.uploadedAt]
+            );
+        }
+        
+        res.json({ 
+            message: 'Files uploaded successfully',
+            files: fileRecords.map(f => ({ id: f.id, filename: f.filename, size: f.size }))
+        });
+        
+    } catch (error) {
+        console.error('File upload error:', error);
+        res.status(500).json({ error: 'Failed to upload files' });
+    }
+});
+
+// Get event files
+app.get('/api/events/:eventId/files', async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        
+        const result = await pool.query(
+            'SELECT id, filename, size, mimetype, uploaded_by, uploaded_at FROM event_files WHERE event_id = $1 ORDER BY uploaded_at DESC',
+            [eventId]
+        );
+        
+        res.json(result.rows);
+        
+    } catch (error) {
+        console.error('Get files error:', error);
+        res.status(500).json({ error: 'Failed to get files' });
+    }
+});
+
+// Download file
+app.get('/api/files/:fileId/download', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        
+        const result = await pool.query(
+            'SELECT filename, stored_name, filepath FROM event_files WHERE id = $1',
+            [fileId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+        
+        const file = result.rows[0];
+        const filePath = path.join(__dirname, file.filepath);
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'File not found on server' });
+        }
+        
+        res.download(filePath, file.filename);
+        
+    } catch (error) {
+        console.error('File download error:', error);
+        res.status(500).json({ error: 'Failed to download file' });
+    }
+});
+
+// Delete file (admin only)
+app.delete('/api/files/:fileId', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        
+        const result = await pool.query(
+            'SELECT filepath FROM event_files WHERE id = $1',
+            [fileId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+        
+        const file = result.rows[0];
+        const filePath = path.join(__dirname, file.filepath);
+        
+        // Delete from database
+        await pool.query('DELETE FROM event_files WHERE id = $1', [fileId]);
+        
+        // Delete from filesystem
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        
+        res.json({ message: 'File deleted successfully' });
+        
+    } catch (error) {
+        console.error('File delete error:', error);
+        res.status(500).json({ error: 'Failed to delete file' });
     }
 });
 

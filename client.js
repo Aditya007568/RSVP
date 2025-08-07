@@ -241,6 +241,110 @@ async function apiGetRSVPByCode(code) {
     }
 }
 
+// File Management API Functions
+async function apiUploadEventFiles(eventId, files) {
+    if (!isServerMode()) {
+        console.log('File upload not available in client-only mode');
+        return { error: 'File upload requires server mode' };
+    }
+
+    try {
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        // Assuming currentUser is available globally or passed as an argument
+        // For now, using a placeholder or assuming it's handled by the server
+        // In a real app, you'd fetch the current user's ID or pass it in the headers
+        const userId = 'admin'; // Placeholder, replace with actual user ID
+        formData.append('userId', userId);
+
+        const response = await fetch(`${API_URL}/events/${eventId}/files`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error uploading files:', error);
+        throw error;
+    }
+}
+
+async function apiGetEventFiles(eventId) {
+    if (!isServerMode()) {
+        console.log('File retrieval not available in client-only mode');
+        return [];
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/events/${eventId}/files`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error getting event files:', error);
+        return [];
+    }
+}
+
+async function apiDownloadFile(fileId) {
+    if (!isServerMode()) {
+        console.log('File download not available in client-only mode');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/files/${fileId}/download`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = response.headers.get('content-disposition')?.split('filename=')[1] || 'download';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        throw error;
+    }
+}
+
+async function apiDeleteFile(fileId) {
+    if (!isServerMode()) {
+        console.log('File deletion not available in client-only mode');
+        return { error: 'File deletion requires server mode' };
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/files/${fileId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        throw error;
+    }
+}
+
 // Export all API functions
 const api = {
     isServerMode,
@@ -263,6 +367,12 @@ const api = {
         create: apiCreateRSVP,
         verify: apiVerifyRSVP,
         getByCode: apiGetRSVPByCode
+    },
+    files: {
+        upload: apiUploadEventFiles,
+        getByEvent: apiGetEventFiles,
+        download: apiDownloadFile,
+        delete: apiDeleteFile
     }
 };
 

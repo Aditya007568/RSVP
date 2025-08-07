@@ -213,6 +213,7 @@
                 </div>
                 
                 <div class="button-group">
+                    <button id="event-files-btn" class="btn btn-accent"><i class="fas fa-folder-open"></i> Event Files</button>
                     <button id="export-rsvp-btn" class="btn btn-secondary"><i class="fas fa-file-export"></i> Export RSVP Data</button>
                     <button id="back-from-event-details" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
                 </div>
@@ -243,6 +244,48 @@
                 
                 <div class="button-group">
                     <button id="back-from-scan" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Files Management Screen -->
+        <div id="event-files-screen" class="screen">
+            <div class="card">
+                <div class="files-header">
+                    <h2><i class="fas fa-folder-open"></i> Event Files: <span id="event-files-name">Event Name</span></h2>
+                    <div class="button-group">
+                        <button id="upload-files-btn" class="btn btn-primary" style="display:none;"><i class="fas fa-upload"></i> Upload Files</button>
+                        <button id="back-from-files" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Event</button>
+                    </div>
+                </div>
+                
+                <!-- File Upload Section (Admin Only) -->
+                <div id="file-upload-section" class="file-upload-section" style="display:none;">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> Upload Event Files</h3>
+                    <form id="file-upload-form" class="form">
+                        <div class="form-group">
+                            <label for="file-input"><i class="fas fa-file"></i> Select Files</label>
+                            <input type="file" id="file-input" multiple accept="*/*" required>
+                            <small>You can select multiple files. All file types are allowed.</small>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload Files</button>
+                            <button type="button" id="cancel-upload" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Files List Section -->
+                <div id="files-list-section">
+                    <h3><i class="fas fa-files-o"></i> Event Files</h3>
+                    <div id="files-list" class="files-list">
+                        <div class="no-files">No files uploaded yet</div>
+                    </div>
+                </div>
+                
+                <!-- Access Control Message -->
+                <div id="access-message" class="access-message" style="display:none;">
+                    <p><i class="fas fa-info-circle"></i> You need to be checked in to access event files.</p>
                 </div>
             </div>
         </div>

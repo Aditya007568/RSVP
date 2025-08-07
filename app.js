@@ -49,6 +49,19 @@ const verifyManualCodeBtn = document.getElementById('verify-manual-code');
 const verificationResult = document.getElementById('verification-result');
 const backFromScanBtn = document.getElementById('back-from-scan');
 
+// DOM Elements for file management
+const eventFilesScreen = document.getElementById('event-files-screen');
+const eventFilesName = document.getElementById('event-files-name');
+const uploadFilesBtn = document.getElementById('upload-files-btn');
+const fileUploadSection = document.getElementById('file-upload-section');
+const fileUploadForm = document.getElementById('file-upload-form');
+const fileInput = document.getElementById('file-input');
+const cancelUploadBtn = document.getElementById('cancel-upload');
+const filesList = document.getElementById('files-list');
+const accessMessage = document.getElementById('access-message');
+const backFromFilesBtn = document.getElementById('back-from-files');
+const eventFilesBtn = document.getElementById('event-files-btn');
+
 // Global variables
 let currentUser = null;
 let currentCommunity = null;
@@ -57,6 +70,7 @@ let html5QrCode = null;
 let sessionTimeout = null;
 const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 let loadingOverlay = null;
+let qrScanCooldown = false;
 
 // Remove Node.js process.env references which don't work in browser
 // NeonDB Configuration will be handled by server.js
@@ -335,9 +349,15 @@ function initializeQRScanner() {
 }
 
 function onScanSuccess(decodedText) {
+    if (qrScanCooldown) return;
+    qrScanCooldown = true;
     verifyRsvpCode(decodedText);
+    setTimeout(() => {
+        qrScanCooldown = false;
+    }, 5000); // 5 seconds cooldown
 }
 
+// Enhanced QR verification with check-in/check-out
 function verifyRsvpCode(code) {
     const rsvps = JSON.parse(localStorage.getItem('rsvps'));
     const rsvp = rsvps.find(r => r.code === code);
@@ -347,20 +367,74 @@ function verifyRsvpCode(code) {
         const event = events.find(e => e.id === rsvp.eventId);
         
         if (event && event.communityId === currentCommunity.id) {
-            // Mark as scanned
-            rsvp.scanned = true;
-            rsvp.scanTimestamp = new Date().toISOString();
-            rsvp.scannedBy = currentUser.id;
-            localStorage.setItem('rsvps', JSON.stringify(rsvps));
+            // Initialize scan count if not exists
+            if (!rsvp.scanCount) {
+                rsvp.scanCount = 0;
+            }
             
-            // Show success message
-            verificationResult.innerHTML = `
-                <h3><i class="fas fa-check-circle"></i> Success!</h3>
-                <p>RSVP verified for ${rsvp.userName}</p>
-                <p>Event: ${event.name}</p>
-                <button id="back-from-verification" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
-            `;
-            verificationResult.className = 'verification-result verification-success';
+            // Check if QR code has been scanned maximum times
+            if (rsvp.scanCount >= 2) {
+                verificationResult.innerHTML = `
+                    <h3><i class="fas fa-times-circle"></i> QR Code Expired</h3>
+                    <p>This QR code has already been used for both check-in and check-out.</p>
+                    <button id="back-from-verification" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                `;
+                verificationResult.className = 'verification-result verification-error';
+            } else {
+                // Process the scan
+                rsvp.scanCount++;
+                
+                if (rsvp.scanCount === 1) {
+                    // First scan - Check in
+                    rsvp.checkedIn = true;
+                    rsvp.checkInTime = new Date().toISOString();
+                    rsvp.scannedBy = currentUser.id;
+                    
+                    verificationResult.innerHTML = `
+                        <h3><i class="fas fa-check-circle"></i> Check-in Successful!</h3>
+                        <p>RSVP verified for ${rsvp.userName}</p>
+                        <p>Event: ${event.name}</p>
+                        <div class="verification-status checked-in">
+                            <i class="fas fa-sign-in-alt"></i> Status: Checked In
+                        </div>
+                        <div class="verification-timestamps">
+                            <div class="timestamp-item">
+                                <span class="timestamp-label">Check-in Time:</span>
+                                <span class="timestamp-value">${new Date(rsvp.checkInTime).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <button id="back-from-verification" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                    `;
+                    verificationResult.className = 'verification-result verification-success';
+                } else if (rsvp.scanCount === 2) {
+                    // Second scan - Check out
+                    rsvp.checkedOut = true;
+                    rsvp.checkOutTime = new Date().toISOString();
+                    
+                    verificationResult.innerHTML = `
+                        <h3><i class="fas fa-check-circle"></i> Check-out Successful!</h3>
+                        <p>RSVP verified for ${rsvp.userName}</p>
+                        <p>Event: ${event.name}</p>
+                        <div class="verification-status checked-out">
+                            <i class="fas fa-sign-out-alt"></i> Status: Checked Out
+                        </div>
+                        <div class="verification-timestamps">
+                            <div class="timestamp-item">
+                                <span class="timestamp-label">Check-in Time:</span>
+                                <span class="timestamp-value">${new Date(rsvp.checkInTime).toLocaleString()}</span>
+                            </div>
+                            <div class="timestamp-item">
+                                <span class="timestamp-label">Check-out Time:</span>
+                                <span class="timestamp-value">${new Date(rsvp.checkOutTime).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <button id="back-from-verification" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+                    `;
+                    verificationResult.className = 'verification-result verification-success';
+                }
+                
+                localStorage.setItem('rsvps', JSON.stringify(rsvps));
+            }
         } else {
             // Wrong event or community
             verificationResult.innerHTML = `
@@ -424,8 +498,10 @@ function exportRSVPData(eventId) {
             'Event Name': event ? event.name : 'Unknown Event',
             'Attendee Name': rsvp.userName,
             'RSVP Code': rsvp.code,
-            'Checked In': rsvp.scanned ? 'Yes' : 'No',
-            'Check-in Time': rsvp.scanTimestamp ? new Date(rsvp.scanTimestamp).toLocaleString() : 'N/A'
+            'Status': rsvp.checkedOut ? 'Checked Out' : (rsvp.checkedIn ? 'Checked In' : 'Not Checked In'),
+            'Check-in Time': rsvp.checkInTime ? new Date(rsvp.checkInTime).toLocaleString() : 'N/A',
+            'Check-out Time': rsvp.checkOutTime ? new Date(rsvp.checkOutTime).toLocaleString() : 'N/A',
+            'Scan Count': rsvp.scanCount || 0
         };
     });
     
@@ -438,6 +514,168 @@ function exportRSVPData(eventId) {
     const eventName = events.find(e => e.id === eventId)?.name || 'Unknown Event';
     const fileName = `${eventName}_RSVP_Data_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+}
+
+// File Management Functions
+function showEventFiles(event) {
+    currentEvent = event;
+    eventFilesName.textContent = event.name;
+    
+    // Check if user is admin or checked in
+    const rsvps = JSON.parse(localStorage.getItem('rsvps'));
+    const userRsvp = rsvps.find(rsvp => 
+        rsvp.eventId === event.id && 
+        rsvp.userId === currentUser.id
+    );
+    
+    const isAdmin = currentUser.isAdmin && currentUser.id === currentCommunity.adminId;
+    const isCheckedIn = userRsvp && userRsvp.checkedIn;
+    
+    // Show/hide upload button for admins
+    if (isAdmin) {
+        uploadFilesBtn.style.display = 'inline-block';
+    } else {
+        uploadFilesBtn.style.display = 'none';
+    }
+    
+    // Show/hide access message
+    if (!isAdmin && !isCheckedIn) {
+        accessMessage.style.display = 'block';
+        filesList.innerHTML = '<div class="no-files">Access restricted to checked-in users</div>';
+    } else {
+        accessMessage.style.display = 'none';
+        loadEventFiles(event.id);
+    }
+    
+    showScreen(eventFilesScreen);
+}
+
+async function loadEventFiles(eventId) {
+    try {
+        showLoading();
+        
+        if (window.api && window.api.isServerMode()) {
+            // Server mode - use API
+            const files = await window.api.files.getByEvent(eventId);
+            displayEventFiles(files);
+        } else {
+            // Client mode - use localStorage
+            const files = JSON.parse(localStorage.getItem('eventFiles') || '[]');
+            const eventFiles = files.filter(file => file.eventId === eventId);
+            displayEventFiles(eventFiles);
+        }
+        
+        hideLoading();
+    } catch (error) {
+        console.error('Error loading event files:', error);
+        hideLoading();
+        showNotification('Failed to load event files', 'error');
+    }
+}
+
+function displayEventFiles(files) {
+    if (files.length === 0) {
+        filesList.innerHTML = '<div class="no-files">No files uploaded yet</div>';
+        return;
+    }
+    
+    filesList.innerHTML = '';
+    files.forEach(file => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        
+        const fileIcon = getFileIcon(file.mimetype || file.filename);
+        const fileSize = formatFileSize(file.size);
+        const uploadDate = new Date(file.uploaded_at || file.uploadedAt).toLocaleDateString();
+        
+        fileItem.innerHTML = `
+            <div class="file-icon">
+                <i class="${fileIcon}"></i>
+            </div>
+            <div class="file-info">
+                <div class="file-name">${file.filename}</div>
+                <div class="file-meta">${fileSize} • ${uploadDate}</div>
+            </div>
+            <div class="file-actions">
+                <button class="file-download-btn" onclick="downloadFile('${file.id}')" title="Download">
+                    <i class="fas fa-download"></i>
+                </button>
+                ${currentUser.isAdmin && currentUser.id === currentCommunity.adminId ? 
+                    `<button class="file-delete-btn" onclick="deleteFile('${file.id}')" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>` : ''
+                }
+            </div>
+        `;
+        
+        filesList.appendChild(fileItem);
+    });
+}
+
+function getFileIcon(mimetype) {
+    if (mimetype.startsWith('image/')) return 'fas fa-image';
+    if (mimetype.startsWith('video/')) return 'fas fa-video';
+    if (mimetype.startsWith('audio/')) return 'fas fa-music';
+    if (mimetype.includes('pdf')) return 'fas fa-file-pdf';
+    if (mimetype.includes('word') || mimetype.includes('document')) return 'fas fa-file-word';
+    if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) return 'fas fa-file-excel';
+    if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return 'fas fa-file-powerpoint';
+    return 'fas fa-file';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function downloadFile(fileId) {
+    try {
+        showLoading();
+        
+        if (window.api && window.api.isServerMode()) {
+            await window.api.files.download(fileId);
+        } else {
+            // Client mode - simulate download
+            showNotification('File download not available in client mode', 'warning');
+        }
+        
+        hideLoading();
+        showNotification('File download started', 'success');
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        hideLoading();
+        showNotification('Failed to download file', 'error');
+    }
+}
+
+async function deleteFile(fileId) {
+    if (!confirm('Are you sure you want to delete this file?')) {
+        return;
+    }
+    
+    try {
+        showLoading();
+        
+        if (window.api && window.api.isServerMode()) {
+            await window.api.files.delete(fileId);
+        } else {
+            // Client mode - remove from localStorage
+            const files = JSON.parse(localStorage.getItem('eventFiles') || '[]');
+            const updatedFiles = files.filter(file => file.id !== fileId);
+            localStorage.setItem('eventFiles', JSON.stringify(updatedFiles));
+        }
+        
+        hideLoading();
+        showNotification('File deleted successfully', 'success');
+        loadEventFiles(currentEvent.id);
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        hideLoading();
+        showNotification('Failed to delete file', 'error');
+    }
 }
 
 // Event Listeners
@@ -748,6 +986,81 @@ backFromCreateEventBtn.addEventListener('click', () => {
 // Event Details
 backFromEventDetailsBtn.addEventListener('click', () => {
     showScreen(dashboardScreen);
+});
+
+// Event Files Button
+eventFilesBtn.addEventListener('click', () => {
+    showEventFiles(currentEvent);
+});
+
+// File Management Event Listeners
+uploadFilesBtn.addEventListener('click', () => {
+    fileUploadSection.style.display = 'block';
+    uploadFilesBtn.style.display = 'none';
+});
+
+cancelUploadBtn.addEventListener('click', () => {
+    fileUploadSection.style.display = 'none';
+    uploadFilesBtn.style.display = 'inline-block';
+    fileUploadForm.reset();
+});
+
+fileUploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const files = fileInput.files;
+    if (files.length === 0) {
+        showNotification('Please select files to upload', 'warning');
+        return;
+    }
+    
+    try {
+        showLoading();
+        
+        if (window.api && window.api.isServerMode()) {
+            // Server mode - use API
+            await window.api.files.upload(currentEvent.id, files);
+        } else {
+            // Client mode - store in localStorage
+            const eventFiles = JSON.parse(localStorage.getItem('eventFiles') || '[]');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileRecord = {
+                    id: Date.now().toString() + i,
+                    eventId: currentEvent.id,
+                    filename: file.name,
+                    size: file.size,
+                    mimetype: file.type,
+                    uploadedBy: currentUser.name,
+                    uploadedAt: new Date().toISOString()
+                };
+                eventFiles.push(fileRecord);
+            }
+            
+            localStorage.setItem('eventFiles', JSON.stringify(eventFiles));
+        }
+        
+        hideLoading();
+        showNotification('Files uploaded successfully', 'success');
+        
+        // Reset form and hide upload section
+        fileUploadForm.reset();
+        fileUploadSection.style.display = 'none';
+        uploadFilesBtn.style.display = 'inline-block';
+        
+        // Reload files list
+        loadEventFiles(currentEvent.id);
+        
+    } catch (error) {
+        console.error('Error uploading files:', error);
+        hideLoading();
+        showNotification('Failed to upload files', 'error');
+    }
+});
+
+backFromFilesBtn.addEventListener('click', () => {
+    showScreen(eventDetailsScreen);
 });
 
 // QR Scanner

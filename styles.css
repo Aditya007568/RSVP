@@ -733,6 +733,199 @@ textarea {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Event Files Management Styles */
+.files-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.files-header h2 {
+    margin-bottom: 0;
+}
+
+.file-upload-section {
+    background-color: var(--primary-light);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 2px dashed var(--primary-color);
+}
+
+.file-upload-section h3 {
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.file-upload-section input[type="file"] {
+    padding: 0.5rem;
+    border: 1px solid var(--text-light);
+    border-radius: 4px;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.file-upload-section small {
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+
+.files-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.file-item {
+    background-color: var(--card-color);
+    border: 1px solid var(--text-light);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all var(--transition-speed) ease;
+    cursor: pointer;
+}
+
+.file-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow);
+    border-color: var(--primary-color);
+}
+
+.file-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+    min-width: 40px;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+}
+
+.file-meta {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.file-download-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color var(--transition-speed) ease;
+}
+
+.file-download-btn:hover {
+    background-color: var(--primary-light);
+}
+
+.file-delete-btn {
+    background: none;
+    border: none;
+    color: var(--error-color);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color var(--transition-speed) ease;
+}
+
+.file-delete-btn:hover {
+    background-color: var(--accent-light);
+}
+
+.no-files {
+    text-align: center;
+    color: var(--text-light);
+    font-style: italic;
+    padding: 2rem;
+    grid-column: 1 / -1;
+}
+
+.access-message {
+    background-color: var(--warning-color);
+    color: var(--text-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.access-message i {
+    margin-right: 0.5rem;
+}
+
+/* Enhanced QR Verification Styles */
+.verification-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+}
+
+.verification-status.checked-in {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.verification-status.checked-out {
+    background-color: var(--info-color);
+    color: white;
+}
+
+.verification-status.not-checked {
+    background-color: var(--text-light);
+    color: white;
+}
+
+.verification-timestamps {
+    background-color: var(--background-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+}
+
+.timestamp-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.timestamp-item:last-child {
+    margin-bottom: 0;
+}
+
+.timestamp-label {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.timestamp-value {
+    color: var(--text-light);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
@@ -792,5 +985,26 @@ textarea {
     
     .rsvp-code {
         font-size: 1.5rem;
+    }
+}
+
+/* Responsive Design for Files */
+@media (max-width: 768px) {
+    .files-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .files-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .file-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .file-actions {
+        justify-content: center;
     }
 }
